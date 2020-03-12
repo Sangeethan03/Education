@@ -109,18 +109,3 @@
       service: name=docker state=started
     - name: haproxy status
       service: name=haproxy state=started
-
-    © 2020 GitHub, Inc.
-    Terms
-    Privacy
-    Security
-    Status
-    Help
-
-    Contact GitHub
-    Pricing
-    API
-    Training
-    Blog
-    About
-
