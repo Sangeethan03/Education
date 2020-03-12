@@ -1,0 +1,169 @@
+https://rancher.com/docs/rancher/v1.5/en/kubernetes/storage/#static-provisioning # Volumes
+https://kubernetes.github.io/ingress-nginx/deploy/ # nginx ingress controller 
+https://kubernetes.io/docs/concepts/services-networking/ingress/ #Example
+https://www.cncf.io/blog/2018/08/01/demystifying-rbac-in-kubernetes/
+https://stackify.com/canary-deployments/
+https://learnk8s.io/kubernetes-rollbacks
+https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/
+https://docs.bitnami.com/bch/infrastructure/kubernetes-sandbox/configuration/add-users/
+Installation on Master & Worker:
+------------------------------
+sudo apt-get update && sudo apt-get install -y apt-transport-https curl
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+cat <<EOF | sudo tee /etc/apt/sources.list.d/kubernetes.list
+deb https://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+
+sudo apt-get remove docker docker-engine docker.io
+sudo apt install docker.io
+systemctl start docker
+systemctl enable docker
+
+HA PROXY CONFIGURATION ON KUBERNETES
+-----------------------------------------
+UNDER GLOBAL SECTIO ADD BELOW CONTENT:
+------------------------------------------
+ frontend kubernetes
+        bind 172.31.33.57:6443
+        option tcplog
+        mode tcp
+        default_backend kubernetes-master-nodes
+
+
+        backend kubernetes-master-nodes
+        mode tcp
+        balance roundrobin
+        option tcp-check
+        server k8s-master-1 172.31.44.203:6443 check fall 3 rise 2
+
+
+
+
+-----------------------------------------
+
+################################################
+ONLY MASTER:
+---------------
+kubeadm init --pod-network-cidr=192.168.0.0/16  --apiserver-advertise-address=172.31.36.79 
+kubectl apply -f https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+####################################################################3
+create a new user
+###################################
+openssl genrsa -out rabi.key 2048
+   35  ls
+   36  openssl req -new -key rabi.key -out rabi.csr -subj "/CN=rabi/O=test"
+   37  ls
+   38  top
+   39  ls
+   40  openssl x509 -req -in rabi.csr -CA /etc/kubernetes/pki/ca.crt -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out rabi.crt -days 365
+    43  mkdir /home/rabi/certs
+   44  ls
+   45  cp rabi.crt rabi.key /home/rabi/certs/
+   46  ls
+   47  kubectl config set-credentials rabi --client-certificate=/home/rabi/certs/rabi.crt  --client-key=/home/rabi/certs/rabi.key 
+   48  cd 
+   49  cd .kube/
+   50  vi config 
+   51  kubectl config set-context rabi-context --cluster=kubernetes --namespace=default --user=rabi
+   52  top
+   53  ls
+   54  vi config 
+   55  kubectl --context=rabi-context get pods
+   56  mkdir /home/rabi/.kube
+   57  cp config /home/rabi/.kube/
+   58  cd 
+   59  su - rabi
+   60  chown -R rabi:rabi /home/rabi/
+   61  chown -Rv rabi:rabi /home/rabi/
+
+CONFIG
+====================
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ""
+    server: https://172.31.82.76:6443
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    namespace: default
+    user: rabi
+  name: rabi-context
+current-context: rabi-context
+kind: Config
+preferences: {}
+users:
+- name: rabi
+  user:
+    client-certificate: /home/rabi/certs/rabi.crt
+    client-key: /home/rabi/certs/rabi.key
+ 
+
+
+
+Only WORKER:
+------------------
+
+TESTING:
+-------------------
+kubectl get pods --all-namespaces
+     cd
+     kubectl get nodes
+     history
+     cd
+     kubectl get namespaces
+     kubectl create deployment nginx --image=nginx
+     kubectl get deployments
+     kubectl describe deployment nginx
+     kubectl create service nodeport nginx --tcp=80:80
+     kubectl get svc
+TUTORIAL:
+---------------
+vi client-pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+        name: clinet-pod
+        labels:
+                componenet: web
+spec:
+        containers:
+                - name: clinet
+                  image: nginx
+                  ports:
+                          - containerPort: 80
+vi client-node-pod.yml
+apiVersion: v1
+kind: Service
+metadata:
+        name: clinet-node-port
+spec:
+        type: NodePort
+        ports:
+         - port: 3050
+           targetPort: 80
+           nodePort: 31515
+        selector:
+                componenet: web
+#######################################
+ kubectl delete deployments nginx
+  kubectl get deployments
+   84  kubectl get svc
+   85  kubectl delete deployments nginx
+   86  kubectl get deployments
+   87  kubectl delete service nginx
+   88  kubectl get deployments
+   89  kubectl get svc
+   90  kubectl delete service clinet-node-port
+   91  kubectl get svc
+   92  ls
+   93  vi client-node-port.yml
+   94  kubectl apply -f client-pod.yml
+   95  kubectl get deployments
+   96  kubectl get pods --all-namespaces
+   97  kubectl delete pod clinet-pod
+
